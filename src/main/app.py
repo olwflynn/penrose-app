@@ -20,7 +20,7 @@ def kafkaProducer():
     req = request.get_json()
     json_payload = json.dumps(req)
     json_payload = str.encode(json_payload)
-
+    print("trying to send to kafka")
     producer.send(TOPIC_NAME, json_payload)
     producer.flush()
     print("Sent to kafka")
@@ -34,5 +34,7 @@ if __name__ == "__main__":
 ##TODO create a truffle smart contract to test with. probs in the test folder
 
 ##TODO rm -r /tmp/zookeeper1 and /tmp/zookeeper once have taken kafka down
-##TODO docker-compose file in tests/resources to spin up kafka
 ##TODO figure out how to store environment variables in flask app
+##TODO create docker image of the flask app for docker
+
+##TODO figure out why it does not seem like we are actually writing to the docker kafka even though it is succeeding
