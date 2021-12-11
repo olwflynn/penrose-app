@@ -35,3 +35,4 @@ if __name__ == "__main__":
 
 ##TODO rm -r /tmp/zookeeper1 and /tmp/zookeeper once have taken kafka down
 ##TODO docker-compose file in tests/resources to spin up kafka
+##TODO figure out how to store environment variables in flask app
