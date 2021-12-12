@@ -13,10 +13,15 @@ services:
       - zookeeper
     ports:
       - '9092:9092'
+      - '9093:9093'
+
     environment:
       - KAFKA_ZOOKEEPER_CONNECT=zookeeper:2181
       - ALLOW_PLAINTEXT_LISTENER=yes
-      - KAFKA_ADVERTISED_LISTENERS=PLAINTEXT://host.docker.internal:9092
+      - KAFKA_LISTENERS=PLAINTEXT://0.0.0.0:9092,EXTERNAL://0.0.0.0:9093
+      - KAFKA_ADVERTISED_LISTENERS=PLAINTEXT://kafka:9092,EXTERNAL://localhost:9093
+      - KAFKA_LISTENER_SECURITY_PROTOCOL_MAP=PLAINTEXT:PLAINTEXT, EXTERNAL:PLAINTEXT
+      - KAFKA_AUTO_CREATE_TOPICS_ENABLE=false
 
   kowl:
     image: quay.io/cloudhut/kowl:master
@@ -39,7 +44,7 @@ services:
       kafka-topics --bootstrap-server kafka:9092 --list
 
       echo -e 'Creating kafka topics'
-      kafka-topics --bootstrap-server kafka:9092 --create --if-not-exists --topic TRANSACTIONS --replication-factor 1 --partitions 1
+      kafka-topics --bootstrap-server kafka:9092 --create --topic TRANSACTIONS --replication-factor 1 --partitions 1
 
       echo -e 'Successfully created the following topics:'
       kafka-topics --bootstrap-server kafka:9092 --list

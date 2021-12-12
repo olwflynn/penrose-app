@@ -6,8 +6,8 @@ from kafka import KafkaConsumer, KafkaProducer
 
 app = Flask(__name__)
 
-TOPIC_NAME = "TRANSACTIONS"
-KAFKA_SERVER = "localhost:9092"
+TOPIC_NAME = "TRANSACTIONSTEST9093"
+KAFKA_SERVER = "localhost:9093"
 
 producer = KafkaProducer(
     bootstrap_servers = KAFKA_SERVER,
@@ -37,4 +37,4 @@ if __name__ == "__main__":
 ##TODO figure out how to store environment variables in flask app
 ##TODO create docker image of the flask app for docker
 
-##TODO figure out why it does not seem like we are actually writing to the docker kafka even though it is succeeding
+##TODO figure out why it do,es not seem like we are actually writing to the docker kafka even though it is succeeding
