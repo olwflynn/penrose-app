@@ -1,12 +1,23 @@
-import self as self
+import pytest
+from src.main.app import create_app
 
-from src.main.app import KafkaProducer
-#
-# def test_producer():
-#     """
-#     GIVEN the producer
-#     WHEN API call is made
-#     THEN check the same message in the body of the API call is what is in kafka
-#     """
-#     flask_app = app.run(debug=True, port = 5000)
-#     KafkaProducer("http://127.0.0.1:5000/kafka/pushTransaction","test json load")
+
+@pytest.fixture
+def client():
+
+    penrose = create_app()
+    penrose.config['TESTING'] = True
+    with penrose.test_client() as client:
+
+        yield client
+
+def test_producer(client):
+    """
+    GIVEN the producer
+    WHEN API call is made
+    THEN check the same message in the body of the API call is what is in kafka
+    """
+    response = client.post('/kafka/pushTransaction',
+                           json=dict(key123="value456"))
+    assert b'It works we got it!!' not in response.data
+    # assert b'It works we got it!!' in response.data

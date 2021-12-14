@@ -13,7 +13,8 @@ Install dependencies -->
 `pip install -r requirements.txt`
 
  Start app --> `python src/main/app.py`
- 
-Setup kafka and kowl --> TODO: Add docker-compose
+
+### In src/tests/resources folder
+Setup kafka and kowl --> `docker-compose up`
 
 Run tests --> TODO: Add tests
