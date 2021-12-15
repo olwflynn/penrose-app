@@ -33,8 +33,8 @@ if __name__ == "__main__":
     app = create_app()
     app.run(debug=True, port = 5000)
 
-##TODO create a truffle smart contract to test with. probs in the test folder
 
 ##TODO rm -r /tmp/zookeeper1 and /tmp/zookeeper once have taken kafka down
 ##TODO create docker image of the flask app for docker
 
+##TODO figure out if we actually need endpoint to post events to. What else do we need endpoints e.g. choose contracts
