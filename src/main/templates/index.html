@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang='en'>
+
+    <h1>{{title}}</h1>
+    <h3>{{ header }}</h3>
+    <form method="post" action="/api/v1/contract">
+        <label>Contract Address:</label><br>
+        <input type="text" id="contract_address" name="contract_address"><br>
+        <label>Contract ABI:</label><br>
+        <input type="text" id="contract_abi" name="contract_abi"><br>
+        <input type="submit" name="submit_button">
+    </form>
+    <h3>List of active contracts from yaml</h3>
+    <body>
+        {% for contract in all_contracts.contracts %}
+            <p>{{contract}}</p>
+        {% endfor %}
+    </body>
+</html>

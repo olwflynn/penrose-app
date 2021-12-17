@@ -1,0 +1,109 @@
+---
+contracts:
+  '0x1e01f8e49FC5E3087751da6Df922736a3BfD9157':
+    abi: |
+      [
+          {
+              "anonymous": false,
+              "inputs": [
+                  {
+                      "indexed": false,
+                      "internalType": "address",
+                      "name": "user",
+                      "type": "address"
+                  },
+                  {
+                      "indexed": false,
+                      "internalType": "uint256",
+                      "name": "amount",
+                      "type": "uint256"
+                  }
+              ],
+              "name": "StorageEvent",
+              "type": "event"
+          },
+          {
+              "constant": false,
+              "inputs": [
+                  {
+                      "internalType": "uint256",
+                      "name": "x",
+                      "type": "uint256"
+                  }
+              ],
+              "name": "set",
+              "outputs": [],
+              "payable": false,
+              "stateMutability": "nonpayable",
+              "type": "function"
+          },
+          {
+              "constant": true,
+              "inputs": [],
+              "name": "get",
+              "outputs": [
+                  {
+                      "internalType": "uint256",
+                      "name": "",
+                      "type": "uint256"
+                  }
+              ],
+              "payable": false,
+              "stateMutability": "view",
+              "type": "function"
+          }
+      ]
+  '0x84229763D17e05F65783048AD0fd425452C55AB3':
+    abi: |
+            [
+                {
+                    "anonymous": false,
+                    "inputs": [
+                        {
+                            "indexed": false,
+                            "internalType": "address",
+                            "name": "user",
+                            "type": "address"
+                        },
+                        {
+                            "indexed": false,
+                            "internalType": "uint256",
+                            "name": "amount",
+                            "type": "uint256"
+                        }
+                    ],
+                    "name": "StorageEvent",
+                    "type": "event"
+                },
+                {
+                    "constant": false,
+                    "inputs": [
+                        {
+                            "internalType": "uint256",
+                            "name": "x",
+                            "type": "uint256"
+                        }
+                    ],
+                    "name": "set",
+                    "outputs": [],
+                    "payable": false,
+                    "stateMutability": "nonpayable",
+                    "type": "function"
+                },
+                {
+                    "constant": true,
+                    "inputs": [],
+                    "name": "get",
+                    "outputs": [
+                        {
+                            "internalType": "uint256",
+                            "name": "",
+                            "type": "uint256"
+                        }
+                    ],
+                    "payable": false,
+                    "stateMutability": "view",
+                    "type": "function"
+                }
+            ]
+
