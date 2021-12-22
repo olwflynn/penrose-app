@@ -1,19 +1,30 @@
 <!DOCTYPE html>
 <html lang='en'>
-
+<link rel="shortcut icon" href="{{ url_for('static', filename='favicon.ico') }}">
     <h1>{{title}}</h1>
-    <h3>{{ header }}</h3>
-    <form method="post" action="/api/v1/contract">
+    <h3>Add new contract</h3>
+    <form method="POST" action="/api/v1/contract">
         <label>Contract Address:</label><br>
-        <input type="text" id="contract_address" name="contract_address"><br>
+        <input type="text" id="contract_address" name="contract_address" placeholder="e.g. 0x1e01f8e49FC5E3087751da6Df922736a3BfD9157"><br>
         <label>Contract ABI:</label><br>
-        <input type="text" id="contract_abi" name="contract_abi"><br>
-        <input type="submit" name="submit_button">
-    </form>
-    <h3>List of active contracts from yaml</h3>
+        <input type="text" id="contract_abi" name="contract_abi" placeholder="[{...'inputs':..}]"><br>
+        <input type="submit" name="submit_button"><br>
+        {{banner}}
+    </form><br>
+    <h3>List of contracts</h3>
     <body>
-        {% for contract in all_contracts.contracts %}
-            <p>{{contract}}</p>
+        {% for item, doc in contracts_yaml.items() %}
+            {% for address, address_doc in doc.items()%}
+                <p>Contract address: {{address}}</p>
+                <p>Web3 provider: {{address_doc.web3provider}}</p>
+                <p>Contract active: {{address_doc.active}}</p>
+                <p>Kafka topic: {{address_doc.topic}} <a href="http://{{kowl_server}}">Link to Kowl</a></p>
+                <input type="button" id="toggle_subscription" name="toggle_subscription" {% if address_doc.active == True %}value="Unsubscribe"{% else %}value="Subscribe"{% endif %}><br><br>
+            {% endfor %}
         {% endfor %}
+    <form action="/api/v1/subscriptions/start" method="GET">
+        <input type="submit" id="start_subscriptions" name="start_subscriptions" value="Start subscriptions">
+    </form>
+    <input type="button" id="stop_subscriptions" name="stop_subscriptions" value="Stop subscriptions">
     </body>
 </html>
