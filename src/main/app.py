@@ -1,7 +1,7 @@
 from flask import Flask, request, jsonify, render_template, make_response, redirect, url_for
 import json, yaml, os
 from kafka import KafkaConsumer, KafkaProducer
-from .subscribe import connect_subscriptions
+from .subscribe import connect_subscriptions, run
 
 def create_app():
 
@@ -74,14 +74,19 @@ def create_app():
                                    kowl_server=app.config.get('KOWL_SERVER'),
                                    banner=successBanner)
         return redirect(url_for('/'))
-##TODO need to make the loop start only in the background as currently cant do anything else
-    @app.route("/api/v1/subscriptions/start", methods=["GET"])
-    def start_subscriptions():
-        connect_subscriptions(producer, topic, contracts_yaml)
-        return make_response(
-            'Subscriptions started',
-            200,
-        )
+
+    @app.route("/api/v1/contract/<contract_address>/subscribe", methods=["GET"])
+    def start_subscriptions(contract_address):
+        contracts_yaml = load_yaml()
+        # connect_subscriptions(producer, topic, contracts_yaml)
+        run(producer, topic, contracts_yaml, contract_address)
+        successBanner = 'You successfully subscribed a contract'
+        return render_template("index.html",
+                               title="Admin Panel",
+                               header="This is where you can connect to contracts!",
+                               contracts_yaml=contracts_yaml,
+                               kowl_server=app.config.get('KOWL_SERVER'),
+                               banner=successBanner)
 
     # @app.route("/api/v1/subscriptions/start", methods=["GET"])
     # def stop_subscriptions():
@@ -96,15 +101,15 @@ if __name__ == "__main__":
 
 ##TODO create docker image of the flask app for docker
 ##TODO subscribe API (DELETE, UPDATE, CREATE), provide subscriptions active, paused, cancelled state
-##TODO create Admin UI to add and store contracts and abis for which to subscribe to and configure which topics to write to
 ##TODO do something crypto specific value add with the events; enable to switch between blockchains by config and add event names
 ##TODO push kafka events to db or analytics
 ##TODO add subscription whilst app is running to see what behaviour is like
 ##TODO ability to create different apps
 ##TODO make the base template nicer and extend the others
+##TODO Write tests
+##TODO figure out why we are double writing
 
 
 ##TODO USER JOURNEY:
-## add contract and abi to yaml config using admin Panel. This is added to the UI with not subscribed state
 ## start subscribing to the new contract. This starts subscribing and changes the state in the UI to active
 ## stop subscribing to the contract. This stops subscribing and changes the state back to not subscribed in the UI

@@ -19,12 +19,11 @@
                 <p>Web3 provider: {{address_doc.web3provider}}</p>
                 <p>Contract active: {{address_doc.active}}</p>
                 <p>Kafka topic: {{address_doc.topic}} <a href="http://{{kowl_server}}">Link to Kowl</a></p>
-                <input type="button" id="toggle_subscription" name="toggle_subscription" {% if address_doc.active == True %}value="Unsubscribe"{% else %}value="Subscribe"{% endif %}><br><br>
+                <form action="/api/v1/contract/{{address}}/subscribe" method="GET">
+                    <input type="submit" id="start_subscriptions" name="start_subscriptions" {% if address_doc.active == True %}value="Unsubscribe"{% else %}value="Subscribe"{% endif %}><br><br>
+                </form>
             {% endfor %}
         {% endfor %}
-    <form action="/api/v1/subscriptions/start" method="GET">
-        <input type="submit" id="start_subscriptions" name="start_subscriptions" value="Start subscriptions">
-    </form>
     <input type="button" id="stop_subscriptions" name="stop_subscriptions" value="Stop subscriptions">
     </body>
 </html>

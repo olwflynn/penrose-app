@@ -1,5 +1,5 @@
 contracts:
-  '0x84229763D17e05F65783048AD0fd425452C55AB3':
+  '0x1e01f8e49FC5E3087751da6Df922736a3BfD9157':
     abi: "[\n    {\n        \"anonymous\": false,\n        \"inputs\": [\n       \
       \     {\n                \"indexed\": false,\n                \"internalType\"\
       : \"address\",\n                \"name\": \"user\",\n                \"type\"\
@@ -21,7 +21,7 @@ contracts:
     active: true
     topic: TRANSACTIONS
     web3provider: ganache
-  '0x84229763D17e05F65783048AD0fd425452C55AB5':
+  '0x84229763D17e05F65783048AD0fd425452C55AB3':
     abi: "[\n    {\n        \"anonymous\": false,\n        \"inputs\": [\n       \
       \     {\n                \"indexed\": false,\n                \"internalType\"\
       : \"address\",\n                \"name\": \"user\",\n                \"type\"\
@@ -43,14 +43,3 @@ contracts:
     active: false
     topic: null
     web3provider: ethereum mainnet
-  '0x84229763D17e05F65783048AD0fd425452C55AB6':
-    abi: testABI
-    active: false
-    topic: null
-    web3provider: ethereum mainnet
-  '0x84229763D17e05F65783048AD0fd425452C55AB9':
-    abi: '[''someAbi'':json]'
-    active: false
-    topic: null
-    web3provider: ethereum mainnet
-

@@ -66,17 +66,24 @@ def get_or_create_eventloop():
 # create a filter for the latest block and look for the "PairCreated" event for the uniswap factory contract
 # run an async loop
 # try to run the log_loop function above every 2 seconds
-def connect_subscriptions(producer, topic, contracts_yaml):
+async def connect_subscriptions(producer, topic, contracts_yaml, contract_address):
     web3_contracts = web3_setup(contracts_yaml)
+    in_scope_web3_contracts = [contract for contract in web3_contracts if contract.address == contract_address]
+    print(in_scope_web3_contracts, 'these are the contracts we are subscribing to')
     loop = get_or_create_eventloop()
     print("starting the loop")
-    try:
-        loop.run_until_complete(
-            asyncio.gather(
-                log_loop(web3_contracts, 2, producer, topic)))
-    finally:
-        # close loop to free up system resources
-        loop.close()
+    # try:
+    #     loop.run_until_complete(
+    #         asyncio.gather(
+    #             log_loop(web3_contracts, 2, producer, topic)))
+    # finally:
+    #     # close loop to free up system resources
+    #     loop.close()
+    task = loop.create_task(log_loop(in_scope_web3_contracts, 2, producer, topic))
+    await task
+
+def run(producer, topic, contracts_yaml, contract_address):
+    asyncio.run(connect_subscriptions(producer, topic, contracts_yaml, contract_address))
 
 
 # if __name__ == "__main__":
