@@ -20,7 +20,7 @@
                 <p>Contract active: {{address_doc.active}}</p>
                 <p>Kafka topic: {{address_doc.topic}} <a href="http://{{kowl_server}}">Link to Kowl</a></p>
                 <form action="/api/v1/contract/{{address}}/subscribe" method="GET">
-                    <input type="submit" id="start_subscriptions" name="start_subscriptions" {% if address_doc.active == True %}value="Unsubscribe"{% else %}value="Subscribe"{% endif %}><br><br>
+                    <input type="submit" id="toggle_subscription" name="toggle_subscription" {% if address_doc.active == True %}value="Unsubscribe"{% else %}value="Subscribe"{% endif %}><br><br>
                 </form>
             {% endfor %}
         {% endfor %}

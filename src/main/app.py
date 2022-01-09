@@ -1,13 +1,22 @@
-from flask import Flask, request, jsonify, render_template, make_response, redirect, url_for
+from flask import Flask, request, jsonify, render_template, redirect, url_for
 import json, yaml, os
-from kafka import KafkaConsumer, KafkaProducer
-from .subscribe import connect_subscriptions, run
+from kafka import KafkaProducer
+from .subscribe import run
+from .tasks import make_celery
+import logging
 
 def create_app():
 
     app = Flask(__name__, template_folder="templates")
     app.config.from_pyfile('settings.py')
     basedir = os.path.abspath(os.path.dirname(__file__))
+
+    app.config.update(
+        CELERY_BROKER_URL='redis://localhost:6379',
+        CELERY_RESULT_BACKEND='redis://localhost:6379'
+    )
+    # celery = make_celery(app)
+    # print(celery)
 
     def load_yaml():
         with open(os.path.join(basedir, 'contracts.yml'), 'r') as stream:
@@ -27,6 +36,8 @@ def create_app():
 
     # This should ultimately be taken from the contracts config file not be an env variable
     topic = app.config.get('TOPIC_NAME')
+
+    subscription_threads_dict = {}
 
     @app.route("/")
     def home():
@@ -54,7 +65,6 @@ def create_app():
     def contract():
         headers = {"Content-Type": "application/json"}
         contracts_yaml = load_yaml()
-        contract_address = "nada"
         if request.method == "POST":
             req = request.form
             contract_address = req.get('contract_address')
@@ -76,11 +86,33 @@ def create_app():
         return redirect(url_for('/'))
 
     @app.route("/api/v1/contract/<contract_address>/subscribe", methods=["GET"])
-    def start_subscriptions(contract_address):
+    def toggle_subscription(contract_address):
         contracts_yaml = load_yaml()
-        # connect_subscriptions(producer, topic, contracts_yaml)
-        run(producer, topic, contracts_yaml, contract_address)
-        successBanner = 'You successfully subscribed a contract'
+        subscription_action = request.args.get('toggle_subscription')
+        if subscription_action == "Subscribe":
+            subscription_thread = run(producer, topic, contracts_yaml, contract_address)
+            subscription_threads_dict[contract_address] = subscription_thread
+            print(subscription_threads_dict)
+            ## update the config with active == true
+            contract_yaml = contracts_yaml['contracts'][contract_address]
+            contract_yaml['active'] = True
+            write_yaml(contracts_yaml)
+
+            successBanner = 'You successfully subscribed contract {}'.format(contract_address)
+            logging.info('Main: Successfully subscribed a contract')
+        else:
+            ## stop subscription_thread and update config with active == false
+            print('stopping subscription_thread')
+            subscription_thread = subscription_threads_dict[contract_address]
+            subscription_thread.stop_thread()
+            print('thread stopped')
+            subscription_thread.join()
+            print('thread joined')
+            contract_yaml = contracts_yaml['contracts'][contract_address]
+            contract_yaml['active'] = False
+            write_yaml(contracts_yaml)
+            successBanner = 'You successfully unsubscribed from contract {}'.format(contract_address)
+
         return render_template("index.html",
                                title="Admin Panel",
                                header="This is where you can connect to contracts!",
@@ -88,28 +120,51 @@ def create_app():
                                kowl_server=app.config.get('KOWL_SERVER'),
                                banner=successBanner)
 
+    # @celery.task()
+    # def add_together(a, b):
+    #     return a + b
+    #
+    # @app.route("/api/v1/celery_test/<a>/<b>", methods=["GET"])
+    # def run_task(a, b):
+    #     result = add_together.delay(a, b)
+    #     result.wait()
+
+
     # @app.route("/api/v1/subscriptions/start", methods=["GET"])
     # def stop_subscriptions():
 
     return app
 
+app = create_app()
 
 if __name__ == "__main__":
-    app = create_app()
-    app.run(debug=True, port = 5000)
+    format = "%(asctime)s: %(message)s"
+    logging.basicConfig(format=format, level=logging.INFO,
+                        datefmt="%H:%M:%S")
+    with app.app_context():
+        app.run(debug=True, port = 5000)
 
-
-##TODO create docker image of the flask app for docker
-##TODO subscribe API (DELETE, UPDATE, CREATE), provide subscriptions active, paused, cancelled state
-##TODO do something crypto specific value add with the events; enable to switch between blockchains by config and add event names
-##TODO push kafka events to db or analytics
-##TODO add subscription whilst app is running to see what behaviour is like
-##TODO ability to create different apps
-##TODO make the base template nicer and extend the others
-##TODO Write tests
-##TODO figure out why we are double writing
-
-
-##TODO USER JOURNEY:
-## start subscribing to the new contract. This starts subscribing and changes the state in the UI to active
+##TODO USER JOURNEY MVP (DONE):
+## start subscribing to the new contract. This starts subscribing and changes the state in the UI to active for a single contract type
 ## stop subscribing to the contract. This stops subscribing and changes the state back to not subscribed in the UI
+
+##TODO MVP
+## create docker image of the flask app for docker
+## redirect to home URL after subscription
+## Write tests
+## Update documentation
+## Clean up unneeded code; refactor connect_subscriptions, remove celery, tasks, scripts.
+
+##TODO BUGS:
+## figure out why when pasting in the abi into the UI comes up with ' instead of " as it causes decode error
+## figure out why logging is not working
+## figure out why we are double writing in subscribe.log_loop
+## on startup make sure that all subscriptions within the config are active=false
+## keeping the state of the running threads is very brittle as in a dict atm
+
+##TODO NEW FEATURES:
+## pull out the methods from the abi into configuration and choose which events to subscribe to
+## start kafka and topic from the UI or ability to create different apps
+## make the base template nicer and extend the others
+## push kafka events to db or analytics
+## enable to switch between blockchains
