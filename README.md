@@ -54,4 +54,4 @@ Now we should create an event by going back to the truffle console and mutating 
 `contractInstance = await SimpleStorage.set('1234')`
 
 As this contract was mutated it will emit an event. We can check this by going to our kafka viewer Kowl at 
-localhost:8080. There you have it you will now store all events relating that contract at the click of a button!
+localhost:8080. There you have it you will now store all events relating                that contract at the click of a button!

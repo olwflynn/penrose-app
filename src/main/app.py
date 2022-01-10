@@ -2,7 +2,6 @@ from flask import Flask, request, jsonify, render_template, redirect, url_for
 import json, yaml, os
 from kafka import KafkaProducer
 from .subscribe import run
-from .tasks import make_celery
 import logging
 
 def create_app():
@@ -15,8 +14,6 @@ def create_app():
         CELERY_BROKER_URL='redis://localhost:6379',
         CELERY_RESULT_BACKEND='redis://localhost:6379'
     )
-    # celery = make_celery(app)
-    # print(celery)
 
     def load_yaml():
         with open(os.path.join(basedir, 'contracts.yml'), 'r') as stream:
@@ -38,6 +35,14 @@ def create_app():
     topic = app.config.get('TOPIC_NAME')
 
     subscription_threads_dict = {}
+
+    @app.before_first_request
+    def all_contracts_inactive():
+        for contract_address in contracts_yaml['contracts']:
+            contract_yaml = contracts_yaml['contracts'][contract_address]
+            contract_yaml['active'] = False
+        write_yaml(contracts_yaml)
+        print('Set all contract subscriptions to inactive')
 
     @app.route("/")
     def home():
@@ -120,19 +125,6 @@ def create_app():
                                kowl_server=app.config.get('KOWL_SERVER'),
                                banner=successBanner)
 
-    # @celery.task()
-    # def add_together(a, b):
-    #     return a + b
-    #
-    # @app.route("/api/v1/celery_test/<a>/<b>", methods=["GET"])
-    # def run_task(a, b):
-    #     result = add_together.delay(a, b)
-    #     result.wait()
-
-
-    # @app.route("/api/v1/subscriptions/start", methods=["GET"])
-    # def stop_subscriptions():
-
     return app
 
 app = create_app()
@@ -150,16 +142,14 @@ if __name__ == "__main__":
 
 ##TODO MVP
 ## create docker image of the flask app for docker
-## redirect to home URL after subscription
 ## Write tests
 ## Update documentation
-## Clean up unneeded code; refactor connect_subscriptions, remove celery, tasks, scripts.
+## Clean up unneeded code; refactor connect_subscriptions
 
 ##TODO BUGS:
 ## figure out why when pasting in the abi into the UI comes up with ' instead of " as it causes decode error
 ## figure out why logging is not working
 ## figure out why we are double writing in subscribe.log_loop
-## on startup make sure that all subscriptions within the config are active=false
 ## keeping the state of the running threads is very brittle as in a dict atm
 
 ##TODO NEW FEATURES:
