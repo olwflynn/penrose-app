@@ -74,8 +74,13 @@ def create_app():
             req = request.form
             contract_address = req.get('contract_address')
             contract_abi = req.get('contract_abi')
-            yaml_append_dict = {contract_address: {'abi':contract_abi, 'web3provider': 'ethereum mainnet',\
-                                                   'active': False, 'topic': None}}
+            print(type(contract_abi))
+            contract_abi = json.loads(contract_abi)
+            print(type(contract_abi))
+            contract_abi = json.dumps(contract_abi)
+            print(type(contract_abi))
+            yaml_append_dict = {contract_address: {"abi":contract_abi, "web3provider": "ethereum mainnet",\
+                                                   "active": False, "topic": None}}
             print(type(contracts_yaml))
             print(yaml_append_dict)
             contracts_yaml['contracts'].update(yaml_append_dict)
@@ -102,9 +107,9 @@ def create_app():
             contract_yaml = contracts_yaml['contracts'][contract_address]
             contract_yaml['active'] = True
             write_yaml(contracts_yaml)
-
             successBanner = 'You successfully subscribed contract {}'.format(contract_address)
             logging.info('Main: Successfully subscribed a contract')
+
         else:
             ## stop subscription_thread and update config with active == false
             print('stopping subscription_thread')
@@ -142,19 +147,24 @@ if __name__ == "__main__":
 
 ##TODO MVP
 ## create docker image of the flask app for docker
-## Write tests
+## Write tests (contract create, change status to active, subscribe to contract and send event to kafka)
 ## Update documentation
 ## Clean up unneeded code; refactor connect_subscriptions
+## pull out the methods from the abi into configuration and choose which events to subscribe to
 
 ##TODO BUGS:
-## figure out why when pasting in the abi into the UI comes up with ' instead of " as it causes decode error
 ## figure out why logging is not working
-## figure out why we are double writing in subscribe.log_loop
 ## keeping the state of the running threads is very brittle as in a dict atm
+## enable the error handling to be passed from child subscribe thread to parent app thread so it can be handled
 
 ##TODO NEW FEATURES:
-## pull out the methods from the abi into configuration and choose which events to subscribe to
 ## start kafka and topic from the UI or ability to create different apps
 ## make the base template nicer and extend the others
 ## push kafka events to db or analytics
 ## enable to switch between blockchains
+
+
+
+## TODO LAUNCH ON ROPSTEN:
+## change config to enable infura_url from ropsten network
+## input address and abi of contract on ropsten and choose the relevant contract

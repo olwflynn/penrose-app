@@ -24,7 +24,12 @@ def web3_setup(contracts_yaml_):
 
     return web3_contracts
 
-
+def get_web3_contract_by_address(list_of_web3_contracts, contract_address):
+    for contract in list_of_web3_contracts:
+        if contract.address == contract_address:
+            web3_contract = contract
+            return web3_contract
+    return 'Contract address is not in list of contracts'
 # define function to handle events and print to the console
 def handle_event(event, producer_, topic_):
     event_json = Web3.toJSON(event)
@@ -40,10 +45,10 @@ def handle_event(event, producer_, topic_):
 # asynchronous defined function to loop
 # this loop sets up an event filter and is looking for new entires for the "PairCreated" event
 # this loop runs on a poll interval
-def log_loop(contracts, poll_interval, producer_, topic_):
-    filters = create_filters(contracts)
-    logging.info("Thread:  before loop and filters are %s", filters)
-    print("Thread:  before loop and filters are %s", filters)
+def log_loop(contract, poll_interval, producer_, topic_):
+    filter = create_filter(contract)
+    logging.info("Thread:  before loop and filters are %s", filter)
+    print("Thread:  before loop and filters are %s", filter)
     # while True:
     #     logging.info("Thread:  in loop now...")
     #     for event_filter in filters:
@@ -51,14 +56,11 @@ def log_loop(contracts, poll_interval, producer_, topic_):
     #             handle_event(StorageEvent, producer_, topic_)
     #         # await asyncio.sleep(poll_interval)
     #         time.sleep(poll_interval)
-    return filters
+    return filter
 
-def create_filters(contracts):
-    event_filter_array = []
-    for web3_contract in contracts:
-        event_filter = web3_contract.events.StorageEvent.createFilter(fromBlock='latest')
-        event_filter_array.append(event_filter)
-    return event_filter_array
+def create_filter(web3_contract):
+    event_filter = web3_contract.events.StorageEvent.createFilter(fromBlock='latest')
+    return event_filter
 
 def get_or_create_eventloop():
     try:
@@ -87,14 +89,15 @@ class SubscriptionThread(threading.Thread):
 
         try:
             print('running ', self.contract_address, 'thread')
-            filters = log_loop(self.web3_contracts, 2, self.producer, self.topic)
+            web3_contract = get_web3_contract_by_address(self.web3_contracts, self.contract_address)
+            filter = log_loop(web3_contract, 2, self.producer, self.topic)
             while self._running:
-                for event_filter in filters:
-                    for StorageEvent in event_filter.get_new_entries():
-                        handle_event(StorageEvent, self.producer, self.topic)
-                    # await asyncio.sleep(poll_interval)
-                    time.sleep(2)
-
+                for StorageEvent in filter.get_new_entries():
+                    handle_event(StorageEvent, self.producer, self.topic)
+                # await asyncio.sleep(poll_interval)
+                time.sleep(2)
+        # except Exception as e:
+        #     print('----- EXCEPTION -----', e)
         finally:
             print(self.contract_address, 'thread ended')
 
