@@ -24,7 +24,20 @@ def create_app():
         with open(os.path.join(basedir, 'contracts.yml'),'w') as yamlfile:
             yaml.safe_dump(updated_yaml, yamlfile)
 
+    def get_contract_event_types(_yaml):
+        contract_event_types = {}
+        for contract_address in _yaml['contracts']:
+            contract_yaml = _yaml['contracts'][contract_address]
+            contract_abi = json.loads(contract_yaml['abi'])
+            contract_event_types[contract_address] = []
+            for obj in contract_abi:
+                if obj['type'] == 'event':
+                    contract_event_types[contract_address].append(obj['name'])
+        return contract_event_types
+
     contracts_yaml = load_yaml()
+    contract_event_types = get_contract_event_types(contracts_yaml)
+    print(contract_event_types)
 
     producer = KafkaProducer(
         bootstrap_servers = app.config.get('KAFKA_SERVER'),
@@ -53,7 +66,8 @@ def create_app():
                                header="This is where you can connect to contracts!",
                                contracts_yaml=contracts_yaml,
                                kowl_server=app.config.get('KOWL_SERVER'),
-                               banner=emptyBanner)
+                               banner=emptyBanner,
+                               contract_event_types=contract_event_types)
 
     @app.route("/kafka/pushTransaction", methods=["POST"])
     def kafkaProducer():
@@ -74,33 +88,31 @@ def create_app():
             req = request.form
             contract_address = req.get('contract_address')
             contract_abi = req.get('contract_abi')
-            print(type(contract_abi))
             contract_abi = json.loads(contract_abi)
-            print(type(contract_abi))
             contract_abi = json.dumps(contract_abi)
-            print(type(contract_abi))
-            yaml_append_dict = {contract_address: {"abi":contract_abi, "web3provider": "ethereum mainnet",\
+            yaml_append_dict = {contract_address: {"abi": contract_abi, "web3provider": "ethereum mainnet",\
                                                    "active": False, "topic": None}}
-            print(type(contracts_yaml))
-            print(yaml_append_dict)
             contracts_yaml['contracts'].update(yaml_append_dict)
             write_yaml(contracts_yaml)
-            successBanner = 'You successfully added a new contract'
+            successBanner = 'You successfully added a new contract with address {}'.format(contract_address)
 
             return render_template("index.html",
                                    title="Admin Panel",
                                    header="This is where you can connect to contracts!",
                                    contracts_yaml=contracts_yaml,
                                    kowl_server=app.config.get('KOWL_SERVER'),
-                                   banner=successBanner)
+                                   banner=successBanner,
+                                   contract_event_types=contract_event_types)
         return redirect(url_for('/'))
 
-    @app.route("/api/v1/contract/<contract_address>/subscribe", methods=["GET"])
+    @app.route("/api/v1/contract/<contract_address>/subscribe", methods=["POST"])
     def toggle_subscription(contract_address):
         contracts_yaml = load_yaml()
-        subscription_action = request.args.get('toggle_subscription')
+        req = request.form
+        subscription_action = req.get('toggle_subscription')
         if subscription_action == "Subscribe":
-            subscription_thread = run(producer, topic, contracts_yaml, contract_address)
+            contract_event_type = req.get('contract_event_type')
+            subscription_thread = run(producer, topic, contracts_yaml, contract_address, contract_event_type)
             subscription_threads_dict[contract_address] = subscription_thread
             print(subscription_threads_dict)
             ## update the config with active == true
@@ -128,7 +140,8 @@ def create_app():
                                header="This is where you can connect to contracts!",
                                contracts_yaml=contracts_yaml,
                                kowl_server=app.config.get('KOWL_SERVER'),
-                               banner=successBanner)
+                               banner=successBanner,
+                               contract_event_types=contract_event_types)
 
     return app
 
@@ -146,16 +159,17 @@ if __name__ == "__main__":
 ## stop subscribing to the contract. This stops subscribing and changes the state back to not subscribed in the UI
 
 ##TODO MVP
-## create docker image of the flask app for docker
+## create docker image of the flask app for docker which also creates blockchain development
 ## Write tests (contract create, change status to active, subscribe to contract and send event to kafka)
 ## Update documentation
 ## Clean up unneeded code; refactor connect_subscriptions
-## pull out the methods from the abi into configuration and choose which events to subscribe to
+## Add feature to show subscribe at event level in the UI and yaml file
 
 ##TODO BUGS:
 ## figure out why logging is not working
 ## keeping the state of the running threads is very brittle as in a dict atm
 ## enable the error handling to be passed from child subscribe thread to parent app thread so it can be handled
+## add error handling for when can't connect to blockchain or kafka
 
 ##TODO NEW FEATURES:
 ## start kafka and topic from the UI or ability to create different apps

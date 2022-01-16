@@ -9,6 +9,15 @@ Learn about how to materialize events from kafka.
 
 ### In project folder:
 
+Create a .env file with the following variables defined (.env file is not pushed to git as it will enable you to store secrets in the future):
+
+`DEBUG=True`
+`FLASK_ENV=development`
+`FLASK_APP=src.main.app.py`
+`TOPIC_NAME = "TRANSACTIONS"`
+`KAFKA_SERVER = "localhost:9093"`
+`KOWL_SERVER ="localhost:8080"`
+
 Install dependencies (if you have created a virtualenv for this project make sure you are in it)-->
 `pip install -r requirements.txt`
 

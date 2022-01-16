@@ -45,21 +45,11 @@ def handle_event(event, producer_, topic_):
 # asynchronous defined function to loop
 # this loop sets up an event filter and is looking for new entires for the "PairCreated" event
 # this loop runs on a poll interval
-def log_loop(contract, poll_interval, producer_, topic_):
-    filter = create_filter(contract)
-    logging.info("Thread:  before loop and filters are %s", filter)
-    print("Thread:  before loop and filters are %s", filter)
-    # while True:
-    #     logging.info("Thread:  in loop now...")
-    #     for event_filter in filters:
-    #         for StorageEvent in event_filter.get_new_entries():
-    #             handle_event(StorageEvent, producer_, topic_)
-    #         # await asyncio.sleep(poll_interval)
-    #         time.sleep(poll_interval)
-    return filter
 
-def create_filter(web3_contract):
-    event_filter = web3_contract.events.StorageEvent.createFilter(fromBlock='latest')
+
+def create_filter(web3_contract, eventType):
+    eventObj = web3_contract.events[eventType]
+    event_filter = eventObj.createFilter(fromBlock='latest')
     return event_filter
 
 def get_or_create_eventloop():
@@ -71,18 +61,14 @@ def get_or_create_eventloop():
             asyncio.set_event_loop(loop)
             return asyncio.get_event_loop()
 
-# when main is called
-# create a filter for the latest block and look for the "PairCreated" event for the uniswap factory contract
-# run an async loop
-# try to run the log_loop function above every 2 seconds
-
 class SubscriptionThread(threading.Thread):
-    def __init__(self, contract_address, web3_contracts, producer, topic):
+    def __init__(self, contract_address, web3_contracts, producer, topic, contract_event_type):
         threading.Thread.__init__(self)
         self.contract_address = contract_address
         self.web3_contracts = web3_contracts
         self.producer = producer
         self.topic = topic
+        self.contract_event_type = contract_event_type
         self._running = True
 
     def run(self):
@@ -90,10 +76,11 @@ class SubscriptionThread(threading.Thread):
         try:
             print('running ', self.contract_address, 'thread')
             web3_contract = get_web3_contract_by_address(self.web3_contracts, self.contract_address)
-            filter = log_loop(web3_contract, 2, self.producer, self.topic)
+            print(web3_contract, self.contract_event_type)
+            filter = create_filter(web3_contract, self.contract_event_type)
             while self._running:
-                for StorageEvent in filter.get_new_entries():
-                    handle_event(StorageEvent, self.producer, self.topic)
+                for event in filter.get_new_entries():
+                    handle_event(event, self.producer, self.topic)
                 # await asyncio.sleep(poll_interval)
                 time.sleep(2)
         # except Exception as e:
@@ -121,15 +108,15 @@ class SubscriptionThread(threading.Thread):
         self._running = False
 
 
-def connect_subscriptions(producer, topic, contracts_yaml, contract_address):
+def connect_subscriptions(producer, topic, contracts_yaml, contract_address, contract_event_type):
     web3_contracts = web3_setup(contracts_yaml)
     in_scope_web3_contracts = [contract for contract in web3_contracts if contract.address == contract_address]
-    print([contract.address for contract in in_scope_web3_contracts], 'these are the contracts we are subscribing to')
+    print([contract.address for contract in in_scope_web3_contracts][0], 'this is the contract we are subscribing to')
     # loop = get_or_create_eventloop()
     # print("starting the loop")
 
     subscription_thread = SubscriptionThread(contract_address=contract_address, web3_contracts=web3_contracts, \
-                                             producer=producer, topic=topic)
+                                             producer=producer, topic=topic, contract_event_type=contract_event_type)
     print("starting thread for ", subscription_thread.contract_address)
     logging.info("Thread:  starting thread")
     subscription_thread.start()
@@ -148,8 +135,8 @@ def connect_subscriptions(producer, topic, contracts_yaml, contract_address):
     # task = loop.create_task(log_loop(in_scope_web3_contracts, 2, producer, topic))
     # await task
 
-def run(producer, topic, contracts_yaml, contract_address):
-    return connect_subscriptions(producer, topic, contracts_yaml, contract_address)
+def run(producer, topic, contracts_yaml, contract_address, contract_event_type):
+    return connect_subscriptions(producer, topic, contracts_yaml, contract_address, contract_event_type)
 
 
 # if __name__ == "__main__":
