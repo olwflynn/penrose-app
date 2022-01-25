@@ -5,28 +5,27 @@ from web3 import Web3
 import asyncio
 import os, yaml, json, time
 import logging
-import ctypes
 
-def web3_setup(contracts_yaml_):
+def web3_setup(contracts_yaml_, infura_url_):
     # add your blockchain connection information
-    infura_url = 'http://127.0.0.1:8545/'
+    infura_url = infura_url_
     web3 = Web3(Web3.HTTPProvider(infura_url))
-
-    #TODO also need to add and pull out the topics from the config
-    # there is only one item = 'contracts' and doc = the dicts of contract addresses and abis
-    # create array of web3 contracts
+    print(web3, 'we have successfully connected')
+    print(web3.provider)
     web3_contracts = []
     for item, doc in contracts_yaml_.items():
         for address, abi_dict in doc.items():
             abi = json.loads(abi_dict['abi'])
-            contract = web3.eth.contract(address=address, abi=abi)
+            contract = web3.eth.contract(address=Web3.toChecksumAddress(address), abi=abi)
+            if address == '0xbc4ca0eda7647a8ab7c2061c2e118a18a936f13d':
+                print(contract.functions.balanceOf(Web3.toChecksumAddress(address)).call(), '--------CONTRACT CALLED ON ROPSTEN-----')
             web3_contracts.append(contract)
 
     return web3_contracts
 
 def get_web3_contract_by_address(list_of_web3_contracts, contract_address):
     for contract in list_of_web3_contracts:
-        if contract.address == contract_address:
+        if contract.address == Web3.toChecksumAddress(contract_address):
             web3_contract = contract
             return web3_contract
     return 'Contract address is not in list of contracts'
@@ -108,9 +107,9 @@ class SubscriptionThread(threading.Thread):
         self._running = False
 
 
-def connect_subscriptions(producer, topic, contracts_yaml, contract_address, contract_event_type):
-    web3_contracts = web3_setup(contracts_yaml)
-    in_scope_web3_contracts = [contract for contract in web3_contracts if contract.address == contract_address]
+def connect_subscriptions(producer, topic, contracts_yaml, contract_address, contract_event_type, infura_url):
+    web3_contracts = web3_setup(contracts_yaml, infura_url)
+    in_scope_web3_contracts = [contract for contract in web3_contracts if contract.address == Web3.toChecksumAddress(contract_address)]
     print([contract.address for contract in in_scope_web3_contracts][0], 'this is the contract we are subscribing to')
     # loop = get_or_create_eventloop()
     # print("starting the loop")
@@ -135,8 +134,8 @@ def connect_subscriptions(producer, topic, contracts_yaml, contract_address, con
     # task = loop.create_task(log_loop(in_scope_web3_contracts, 2, producer, topic))
     # await task
 
-def run(producer, topic, contracts_yaml, contract_address, contract_event_type):
-    return connect_subscriptions(producer, topic, contracts_yaml, contract_address, contract_event_type)
+def run(producer, topic, contracts_yaml, contract_address, contract_event_type, infura_url):
+    return connect_subscriptions(producer, topic, contracts_yaml, contract_address, contract_event_type, infura_url)
 
 
 # if __name__ == "__main__":
