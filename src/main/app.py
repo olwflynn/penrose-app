@@ -12,7 +12,7 @@ def create_app():
     basedir = os.path.abspath(os.path.dirname(__file__))
 
     #local or public blockchain. Set to false if developing locally
-    public_blockchain = True
+    public_blockchain = False
 
     def load_yaml():
         with open(os.path.join(basedir, 'contracts.yml'), 'r') as stream:
@@ -27,14 +27,18 @@ def create_app():
         contract_event_types = {}
         for contract_address in _yaml['contracts']:
             contract_yaml = _yaml['contracts'][contract_address]
-            contract_abi = json.loads(contract_yaml['abi'])
-            contract_event_types[contract_address] = []
-            for obj in contract_abi:
-                try:
-                    if obj['type'] == 'event':
-                        contract_event_types[contract_address].append(obj['name'])
-                except KeyError:
-                    pass
+            try:
+                contract_abi = json.loads(contract_yaml['abi'])
+                contract_event_types[contract_address] = []
+                for obj in contract_abi:
+                    try:
+                        if obj['type'] == 'event':
+                            contract_event_types[contract_address].append(obj['name'])
+                    except KeyError:
+                        pass
+            except KeyError:
+                print('Warning - contract {} has no ABI'.format(contract_address))
+                pass
         return contract_event_types
 
     contracts_yaml = load_yaml()
@@ -95,26 +99,31 @@ def create_app():
                 contract_address = req.get('contract_address')
                 contract_address = Web3.toChecksumAddress(contract_address)
                 contract_abi = req.get('contract_abi')
-                contract_abi = json.loads(contract_abi)
-                contract_abi = json.dumps(contract_abi)
-                print(contract_abi)
-                yaml_append_dict = {contract_address: {"abi": contract_abi, "web3provider": "ethereum mainnet",\
-                                                       "active": False, "topic": None}}
+                if contract_abi is not None:
+                    contract_abi = json.loads(contract_abi)
+                    for obj in contract_abi:
+                        obj_type = obj['type']
+                        obj_inputs = obj['inputs']
+                        for obj_input in obj_inputs:
+                            obj_input_type = obj_input['type']
+                    contract_abi = json.dumps(contract_abi)
+                    print(contract_abi)
+                    yaml_append_dict = {contract_address: {"abi": contract_abi, "web3provider": "ethereum mainnet",\
+                                                           "active": False, "topic": None}}
+                else:
+                    yaml_append_dict = {contract_address: {"web3provider": "ethereum mainnet", \
+                                                           "active": False, "topic": None}}
                 contracts_yaml['contracts'].update(yaml_append_dict)
                 write_yaml(contracts_yaml)
                 successBanner = 'You successfully added a new contract with address {}'.format(contract_address)
             except json.JSONDecodeError:
-                return "Bad Request", 400
+                return "Bad Request - ABI not valid JSON", 400
             except ValueError:
                 return "Invalid Contract Address", 400
+            except KeyError:
+                return "Invalid ABI - check type exists", 400
 
-            return render_template("index.html",
-                                   title="Admin Panel",
-                                   header="This is where you can connect to contracts!",
-                                   contracts_yaml=contracts_yaml,
-                                   kowl_server=app.config.get('KOWL_SERVER'),
-                                   banner=successBanner,
-                                   contract_event_types=contract_event_types)
+            return redirect(url_for('success', messageBanner=successBanner))
         return redirect(url_for('/'))
 
     @app.route("/api/v1/contract/<contract_address>/subscribe", methods=["POST"])
@@ -130,7 +139,10 @@ def create_app():
         print('URLLLLLL', infura_url)
         if subscription_action == "Subscribe":
             contract_event_type = req.get('contract_event_type')
-            subscription_thread = run(producer, topic, contracts_yaml, contract_address, contract_event_type, infura_url)
+            try:
+                subscription_thread = run(producer, topic, contracts_yaml, contract_address, contract_event_type, infura_url)
+            except ConnectionRefusedError:
+                print("TRY NOW HERE")
             subscription_threads_dict[contract_address] = subscription_thread
             print(subscription_threads_dict)
             ## update the config with active == true
@@ -153,12 +165,17 @@ def create_app():
             write_yaml(contracts_yaml)
             successBanner = 'You successfully unsubscribed from contract {}'.format(contract_address)
 
+        return redirect(url_for('success', messageBanner=successBanner))
+
+    @app.route('/success/<messageBanner>')
+    def success(messageBanner):
+
         return render_template("index.html",
                                title="Admin Panel",
                                header="This is where you can connect to contracts!",
                                contracts_yaml=contracts_yaml,
                                kowl_server=app.config.get('KOWL_SERVER'),
-                               banner=successBanner,
+                               banner=messageBanner,
                                contract_event_types=contract_event_types)
 
     return app
@@ -180,11 +197,8 @@ if __name__ == "__main__":
 
 ##TODO MVP
 ## create docker image of the flask app for docker which also creates blockchain development
-## Write tests (contract create, change status to active, subscribe to contract and send event to kafka)
+## Write tests (change status to active, subscribe to contract and send event to kafka) - FIGURE OUT HOW TO throw exceptions in main thread from connnection error
 ## Clean up unneeded code; refactor connect_subscriptions
-## Add feature to show subscribe at event level in the UI and yaml file
-## try using the truffle app to interact with events or try to read something from the contract in order to make sure we
-## connected.
 
 ##TODO BUGS:
 ## figure out why logging is not working

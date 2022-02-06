@@ -15,10 +15,14 @@ def web3_setup(contracts_yaml_, infura_url_):
     web3_contracts = []
     for item, doc in contracts_yaml_.items():
         for address, abi_dict in doc.items():
-            abi = json.loads(abi_dict['abi'])
+            try:
+                abi = json.loads(abi_dict['abi'])
+            except KeyError:
+                print('Contract at address {} has no abi stored. Will assume NFT events are present')
+                abi = json.loads('[{"anonymous": false, "inputs": [{"indexed": false, "internalType": "address","name": "user", "type": "address"}, \
+                {"indexed": false, "internalType": "uint256","name": "amount", "type": "uint256"}], "name": "StorageEvent", "type": "event"}]')
             contract = web3.eth.contract(address=Web3.toChecksumAddress(address), abi=abi)
-            if address == '0xbc4ca0eda7647a8ab7c2061c2e118a18a936f13d':
-                print(contract.functions.balanceOf(Web3.toChecksumAddress(address)).call(), '--------CONTRACT CALLED ON ROPSTEN-----')
+            print('Ready to subscribe to {} contract'.format(address))
             web3_contracts.append(contract)
 
     return web3_contracts
@@ -48,8 +52,12 @@ def handle_event(event, producer_, topic_):
 
 def create_filter(web3_contract, eventType):
     eventObj = web3_contract.events[eventType]
-    event_filter = eventObj.createFilter(fromBlock='latest')
-    return event_filter
+    print('WE ARE HERE -------')
+    try:
+        event_filter = eventObj.createFilter(fromBlock='latest')
+        return event_filter
+    except ConnectionError as e:
+        return 'Connection to blockchain refused while trying to subscribe to contract - pls check connection'
 
 def get_or_create_eventloop():
     try:
@@ -76,7 +84,10 @@ class SubscriptionThread(threading.Thread):
             print('running ', self.contract_address, 'thread')
             web3_contract = get_web3_contract_by_address(self.web3_contracts, self.contract_address)
             print(web3_contract, self.contract_event_type)
-            filter = create_filter(web3_contract, self.contract_event_type)
+            try:
+                filter = create_filter(web3_contract, self.contract_event_type)
+            except ConnectionRefusedError:
+                print('WHAT ABOUT HERE')
             while self._running:
                 for event in filter.get_new_entries():
                     handle_event(event, self.producer, self.topic)
