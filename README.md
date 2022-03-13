@@ -3,7 +3,7 @@
 ## Goal
 Learn about kafka and building an app to interact with interact it.
 Learn about web3 / blockchain events and how to parse important info from them.
-Learn about how to materialize events from kafka.
+Learn about how to materialize events from kafka. For now we pushed events to a discord channel
 
 ## Setup
 
@@ -11,12 +11,24 @@ Learn about how to materialize events from kafka.
 
 Create a .env file with the following variables defined (.env file is not pushed to git as it will enable you to store secrets in the future):
 
-`DEBUG=True`
-`FLASK_ENV=development`
-`FLASK_APP=src.main.app.py`
-`TOPIC_NAME = "TRANSACTIONS"`
-`KAFKA_SERVER = "localhost:9093"`
-`KOWL_SERVER ="localhost:8080"`
+```DEBUG=True
+FLASK_ENV=development
+FLASK_APP=src.main.app.py
+
+TOPIC_NAME = "TRANSACTIONS"
+KAFKA_SERVER = "localhost:9093"
+KOWL_SERVER ="localhost:8080"
+LOCAL_INFURA_URL = "http://127.0.0.1:8545"
+
+PUBLIC_INFURA_URL = "https://mainnet.infura.io/v3/{project_id}"
+
+DEV_MNEMONIC="common team mask version permit nurse scale hunt corn slow hip off"
+
+DISCORD_WEBHOOK_URL="{DISCORD_WEBHOOK_URL}"
+
+#local or public blockchain. Set to false if developing locally
+PUBLIC_BLOCKCHAIN=True
+```
 
 Install dependencies (if you have created a virtualenv for this project make sure you are in it)-->
 `pip install -r requirements.txt`
@@ -26,7 +38,7 @@ Install dependencies (if you have created a virtualenv for this project make sur
 ### In src/tests/resources folder
 Setup kafka and kowl --> `docker-compose up`
 
-Run tests --> TODO: Add tests
+Run tests --> pytest
 
 ### How to use the app:
 
@@ -34,9 +46,9 @@ The app allows you to add contract addresses and abis for the contracts that you
 to subscribe to their events (note in current MVP version only SimpleStorage contract is allowed).
 
 From here you can hit the subscribe button to start receiving events from these 
-contracts. In order to test the firing of events you can you can use the instructions below to
+contracts. In order to test the firing of events you can you can use the instructions below to:
 
-### Create event in contract for subscribed contracts and receive in Kafka
+### Create event in smart contract for subscribed contracts and receive in Kafka
 
 First, make sure you have followed the above setup instructions for the app, kafka and kowl
 
@@ -64,3 +76,14 @@ Now we should create an event by going back to the truffle console and mutating 
 
 As this contract was mutated it will emit an event. We can check this by going to our kafka viewer Kowl at 
 localhost:8080. There you have it you will now store all events relating                that contract at the click of a button!
+
+
+### Running on mainnet for BAYC smart contract
+
+Bored Ape Yacht Club NFTs are trading at multiple $100k and so I thought it would be interesting to leverage this 
+platform to subscribe to events from this smart contract and send them to a discord channel to enable quick access to 
+events such as when ownership is transferred along with the addresses and tokenID of the parties involved.
+
+By connecting to mainnet by updating the infura_url and setting the public_blockchain=True in the .env file you can subscribe to
+the BAYC contract too! The address of the smart contract is already setup in the initial setup so you just need to subscribe to
+`Contract address: 0xBC4CA0EdA7647A8aB7C2061c2E118A18a936f13D`
