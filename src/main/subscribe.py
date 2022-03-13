@@ -5,12 +5,13 @@ from web3 import Web3
 import asyncio
 import os, yaml, json, time
 import logging
+from .discord_client import send_message_to_discord
 
 def web3_setup(contracts_yaml_, infura_url_):
     # add your blockchain connection information
     infura_url = infura_url_
     web3 = Web3(Web3.HTTPProvider(infura_url))
-    print(web3, 'we have successfully connected')
+    print(web3, 'we have successfully connected to blockchain')
     print(web3.provider)
     web3_contracts = []
     for item, doc in contracts_yaml_.items():
@@ -18,9 +19,9 @@ def web3_setup(contracts_yaml_, infura_url_):
             try:
                 abi = json.loads(abi_dict['abi'])
             except KeyError:
-                print('Contract at address {} has no abi stored. Will assume NFT events are present')
+                print('Contract at address {} has no abi stored. Will assume NFT events are present and add Transfer event as abi'.format(address))
                 abi = json.loads('[{"anonymous": false, "inputs": [{"indexed": false, "internalType": "address","name": "user", "type": "address"}, \
-                {"indexed": false, "internalType": "uint256","name": "amount", "type": "uint256"}], "name": "StorageEvent", "type": "event"}]')
+                {"indexed": false, "internalType": "uint256","name": "amount", "type": "uint256"}], "name": "Transfer", "type": "event"}]')
             contract = web3.eth.contract(address=Web3.toChecksumAddress(address), abi=abi)
             print('Ready to subscribe to {} contract'.format(address))
             web3_contracts.append(contract)
@@ -38,9 +39,10 @@ def handle_event(event, producer_, topic_):
     event_json = Web3.toJSON(event)
     print(event_json)
     # response = requests.post('http://localhost:5000/kafka/pushTransaction',json=event_json)
-    event_json = str.encode(event_json)
-    producer_.send(topic_, event_json)
+    event_str = str.encode(event_json)
+    producer_.send(topic_, event_str)
     producer_.flush()
+    send_message_to_discord(url=os.environ.get('DISCORD_WEBHOOK_URL'), message=event_json, parse=True)
     print("Sent message to kafka")
 
 
@@ -79,33 +81,38 @@ class SubscriptionThread(threading.Thread):
         self._running = True
 
     def run(self):
+        self.exc = None
+        # try:
+        print('running ', self.contract_address, 'thread')
+        web3_contract = get_web3_contract_by_address(self.web3_contracts, self.contract_address)
+        print(web3_contract, self.contract_event_type)
 
-        try:
-            print('running ', self.contract_address, 'thread')
-            web3_contract = get_web3_contract_by_address(self.web3_contracts, self.contract_address)
-            print(web3_contract, self.contract_event_type)
-            try:
-                filter = create_filter(web3_contract, self.contract_event_type)
-            except ConnectionRefusedError:
-                print('WHAT ABOUT HERE')
-            while self._running:
-                for event in filter.get_new_entries():
-                    handle_event(event, self.producer, self.topic)
-                # await asyncio.sleep(poll_interval)
-                time.sleep(2)
-        # except Exception as e:
-        #     print('----- EXCEPTION -----', e)
-        finally:
-            print(self.contract_address, 'thread ended')
+        filter = create_filter(web3_contract, self.contract_event_type)
+        while self._running:
+
+            for event in filter.get_new_entries():
+                handle_event(event, self.producer, self.topic)
+            # await asyncio.sleep(poll_interval)
+            time.sleep(2)
+        # except BaseException as e:
+        #     self.exc = e
+        #     print('THIS IS EXCEPTION IN THE SUBSCRIBE THREAD', e)
+            # threading.Thread.join(self)
+        # finally:
+        #     print(self.contract_address, 'thread ended')
+        #     threading.Thread.join(self)
+        #     if self.exc:
+        #             raise self.exc
+        #     print('thread JOINED AND ENDED AND EXCEPTION MAY BE RAISED')
 
     def get_id(self):
 
-        # returns id of the respective thread
-        if hasattr(self, '_thread_id'):
-            return self._thread_id
-        for id, thread in threading._active.items():
-            if thread is self:
-                return id
+            # returns id of the respective thread
+            if hasattr(self, '_thread_id'):
+                return self._thread_id
+            for id, thread in threading._active.items():
+                if thread is self:
+                    return id
 
     def stop_thread(self):
         # thread_id = self.get_id()
@@ -117,6 +124,10 @@ class SubscriptionThread(threading.Thread):
         # print('stopping thread')
         self._running = False
 
+    def join(self):
+        threading.Thread.join(self)
+        if self.exc:
+            raise self.exc
 
 def connect_subscriptions(producer, topic, contracts_yaml, contract_address, contract_event_type, infura_url):
     web3_contracts = web3_setup(contracts_yaml, infura_url)
@@ -130,20 +141,14 @@ def connect_subscriptions(producer, topic, contracts_yaml, contract_address, con
     print("starting thread for ", subscription_thread.contract_address)
     logging.info("Thread:  starting thread")
     subscription_thread.start()
-    logging.info("Thread:  started thread")
-    return subscription_thread
-        # global stop_threads
-        # if stop_threads:
-        #     break
+    print("Thread:  started thread XXXXXXX")
+
     # try:
-    #     loop.run_until_complete(
-    #         asyncio.gather(
-    #             log_loop(web3_contracts, 2, producer, topic)))
-    # finally:
-    #     # close loop to free up system resources
-    #     loop.close()
-    # task = loop.create_task(log_loop(in_scope_web3_contracts, 2, producer, topic))
-    # await task
+    #     subscription_thread.join()
+    # except Exception as e:
+    #     print("Exception Handled in SUBSCRIBE BUT MAIN, Details of the Exception:", e)
+
+    return subscription_thread
 
 def run(producer, topic, contracts_yaml, contract_address, contract_event_type, infura_url):
     return connect_subscriptions(producer, topic, contracts_yaml, contract_address, contract_event_type, infura_url)

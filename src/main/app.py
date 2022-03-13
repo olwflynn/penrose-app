@@ -4,6 +4,7 @@ from kafka import KafkaProducer
 from .subscribe import run
 import logging
 from web3 import Web3
+from .discord_client import send_message_to_discord
 
 def create_app():
 
@@ -11,8 +12,6 @@ def create_app():
     app.config.from_pyfile('settings.py')
     basedir = os.path.abspath(os.path.dirname(__file__))
 
-    #local or public blockchain. Set to false if developing locally
-    public_blockchain = False
 
     def load_yaml():
         with open(os.path.join(basedir, 'contracts.yml'), 'r') as stream:
@@ -43,7 +42,6 @@ def create_app():
 
     contracts_yaml = load_yaml()
     contract_event_types = get_contract_event_types(contracts_yaml)
-    print(contract_event_types)
 
     producer = KafkaProducer(
         bootstrap_servers = app.config.get('KAFKA_SERVER'),
@@ -52,11 +50,16 @@ def create_app():
 
     # This should ultimately be taken from the contracts config file not be an env variable
     topic = app.config.get('TOPIC_NAME')
-    print(topic)
-    infura_url = app.config.get('PUBLIC_INFURA_URL')
-    print(infura_url)
 
+    discord_url = app.config.get('DISCORD_WEBHOOK_URL')
+    public_blockchain = app.config.get('PUBLIC_BLOCKCHAIN')
     subscription_threads_dict = {}
+    print('PUBLIC_BLOCKCHAIN is ', public_blockchain)
+    if public_blockchain == "True":
+        infura_url = app.config.get('PUBLIC_INFURA_URL')
+    else:
+        infura_url = app.config.get('LOCAL_INFURA_URL')
+    print('BLOCKCHAIN CONNECTED IS ', infura_url)
 
     @app.before_first_request
     def all_contracts_inactive():
@@ -132,25 +135,21 @@ def create_app():
         req = request.form
         subscription_action = req.get('toggle_subscription')
 
-        if public_blockchain:
-            infura_url = app.config.get('PUBLIC_INFURA_URL')
-        else:
-            infura_url = app.config.get('LOCAL_INFURA_URL')
-        print('URLLLLLL', infura_url)
         if subscription_action == "Subscribe":
             contract_event_type = req.get('contract_event_type')
             try:
                 subscription_thread = run(producer, topic, contracts_yaml, contract_address, contract_event_type, infura_url)
-            except ConnectionRefusedError:
-                print("TRY NOW HERE")
+            except Exception as e:
+                print("Exception Handled in Main, Details of the Exception:", e)
             subscription_threads_dict[contract_address] = subscription_thread
             print(subscription_threads_dict)
             ## update the config with active == true
             contract_yaml = contracts_yaml['contracts'][contract_address]
             contract_yaml['active'] = True
             write_yaml(contracts_yaml)
-            successBanner = 'You successfully subscribed contract {}'.format(contract_address)
+            successBanner = 'You successfully subscribed contract {} and event {}'.format(contract_address, contract_event_type)
             logging.info('Main: Successfully subscribed a contract')
+            send_message_to_discord(url=discord_url, message=successBanner,parse=False)
 
         else:
             ## stop subscription_thread and update config with active == false
@@ -197,7 +196,8 @@ if __name__ == "__main__":
 
 ##TODO MVP
 ## create docker image of the flask app for docker which also creates blockchain development
-## Write tests (change status to active, subscribe to contract and send event to kafka) - FIGURE OUT HOW TO throw exceptions in main thread from connnection error
+## Write tests (change status to active, subscribe to contract and send event to kafka) -
+## FIGURE OUT HOW TO throw exceptions in main thread from connnection error --> had a go add adding some exceptions and raising into the main thread by using join whih returns to caller but did not work
 ## Clean up unneeded code; refactor connect_subscriptions
 
 ##TODO BUGS:
