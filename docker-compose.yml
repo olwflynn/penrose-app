@@ -1,6 +1,19 @@
 version: "3"
 
 services:
+  web:
+    build: .
+    ports:
+      - "8000:5000"
+    environment:
+      TOPIC_NAME: "TRANSACTIONS"
+      KAFKA_SERVER: "kafka:9092"
+      KOWL_SERVER: "localhost:8080"
+      LOCAL_INFURA_URL: "http://127.0.0.1:8545"
+      PUBLIC_INFURA_URL: $PUBLIC_INFURA_URL
+      DEV_MNEMONIC: $DEV_MNEMONIC
+      DISCORD_WEBHOOK_URL: $DISCORD_WEBHOOK_URL
+      PUBLIC_BLOCKCHAIN: "True"
   zookeeper:
     image: confluentinc/cp-zookeeper:latest
     environment:

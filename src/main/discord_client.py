@@ -14,7 +14,7 @@ def send_message_to_discord(url, message, parse):
 def parse_message(message):
     parsed_message = ''
     args_parsed_keys = ['owner', 'to', 'tokenId']
-    other_parsed_keys = ['address', 'blockNumber','event']
+    other_parsed_keys = ['address', 'blockNumber','event','transactionHash']
 
     for arg_key in args_parsed_keys:
         try:
@@ -23,10 +23,13 @@ def parse_message(message):
             print(arg_key, 'is not present')
 
     for other_key in other_parsed_keys:
-        try:
-            parsed_message = parsed_message + other_key + ': ' + str(message[other_key]) + '\n'
-        except KeyError:
-            print(other_key, 'is not present')
+        if other_key == 'transactionHash':
+            parsed_message = parsed_message + str('https://etherscan.io/tx/{}'.format(message[other_key])) + '\n'
+        else:
+            try:
+                parsed_message = parsed_message + other_key + ': ' + str(message[other_key]) + '\n'
+            except KeyError:
+                print(other_key, 'is not present')
     return parsed_message
 
 # import json

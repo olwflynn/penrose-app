@@ -181,12 +181,6 @@ def create_app():
 
 app = create_app()
 
-if __name__ == "__main__":
-    format = "%(asctime)s: %(message)s"
-    logging.basicConfig(format=format, level=logging.INFO,
-                        datefmt="%H:%M:%S")
-    with app.app_context():
-        app.run(debug=True, port = 5000)
 
 ##TODO USER JOURNEY MVP (DONE):
 ## start subscribing to the new contract. This starts subscribing and changes the state in the UI to active for a single contract type
