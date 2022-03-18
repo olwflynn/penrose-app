@@ -22,7 +22,7 @@ LOCAL_INFURA_URL = "http://127.0.0.1:8545"
 
 PUBLIC_INFURA_URL = "https://mainnet.infura.io/v3/{project_id}"
 
-DEV_MNEMONIC="common team mask version permit nurse scale hunt corn slow hip off"
+DEV_MNEMONIC="{DEV_MNEMONIC}"
 
 DISCORD_WEBHOOK_URL="{DISCORD_WEBHOOK_URL}"
 
